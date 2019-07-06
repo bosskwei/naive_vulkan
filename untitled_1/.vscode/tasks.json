@@ -4,6 +4,18 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "make_dir",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceRoot}"
+            },
+            "command": "mkdir",
+            "args": [
+                "build",
+                "-p"
+            ]
+        },
+        {
             "label": "run_cmake",
             "type": "shell",
             "options": {
@@ -13,6 +25,21 @@
             "args": [
                 "..",
                 "-DCMAKE_BUILD_TYPE=Debug"
+            ],
+            "dependsOn": "make_dir"
+        },
+        {
+            "label": "compile_shader",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceRoot}/shaders"
+            },
+            "command": "glslangValidator",
+            "args": [
+                "-V",
+                "vulkan_1.comp",
+                "-o",
+                "comp_1.spv"
             ]
         },
         {
@@ -29,7 +56,7 @@
         },
         {
             "label": "build",
-            "dependsOn": ["run_build"]
+            "dependsOn": ["run_build", "compile_shader"]
         }
     ]
 }

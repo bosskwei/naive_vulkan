@@ -1,0 +1,31 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+
+layout(set = 0, binding = 0) buffer Buffer
+{
+   uint32_t data[];
+};
+
+void main() {
+    uint32_t x = gl_GlobalInvocationID.x;
+    uint32_t y = gl_GlobalInvocationID.y;
+
+    float x_start = -2.0;
+    float x_step = 4.0 / 1024;
+    float x_coord = x_start + x * x_step;
+    float y_coord = x_start + y * x_step;
+
+    data[y * 1024 + x] = 0;
+
+    float zx = 0.0, zy = 0.0;
+    for (uint32_t i = 0; i < 50; i += 1) {
+        float t = zx * zx - zy * zy + x_coord;
+        zy = 2 * zx * zy + y_coord;
+        zx = t;
+        if (sqrt(zx * zx + zy * zy) > 2.0) {
+            break;
+        }
+        data[y * 1024 + x] += 0x0200;
+    }
+    data[y * 1024 + x] |= 0xFF000000;
+}

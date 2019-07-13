@@ -14,7 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories(${GLFW_INCLUDE_DIRS})
 include_directories(${Vulkan_INCLUDE_DIRS})
-# include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/include)
 
 add_executable(
         untitled_1
@@ -26,3 +26,8 @@ target_link_libraries(
         ${Vulkan_LIBRARY}
         ${CMAKE_THREAD_LIBS_INIT}
 )
+
+install(
+        DIRECTORY ${PROJECT_SOURCE_DIR}/include/
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.h*")

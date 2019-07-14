@@ -2,7 +2,6 @@ package com.example.jniview2
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Color
 import android.os.Bundle
 import android.util.AttributeSet
 import com.google.android.material.snackbar.Snackbar
@@ -11,8 +10,9 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.ImageView
 import android.graphics.Bitmap
+import android.widget.TextView
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlin.math.min
+
 
 
 class MainActivity : AppCompatActivity() {
@@ -26,8 +26,8 @@ class MainActivity : AppCompatActivity() {
                 .setAction("Action", null).show()
         }
 
-        val shader: ByteArray = this.assets.open("shader/comp_1.spv").readBytes()
         val imageView: CustomImageView = this.findViewById(R.id.imageView)
+        val shader: ByteArray = this.assets.open("shader/comp_1.spv").readBytes()
         imageView.renderReady(shader)
     }
 
@@ -71,6 +71,9 @@ class CustomImageView : ImageView {
         if (!this.initialized) {
             return
         }
+
+        var textView = (this.context as MainActivity).findViewById<TextView>(R.id.textView)
+        textView.text = "12345"
 
         this.renderNative(this.drawBitmap)
         canvas.drawBitmap(this.drawBitmap, 0.0f, 0.0f, null)

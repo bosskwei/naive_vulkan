@@ -108,11 +108,7 @@ public:
     vkGetBufferMemoryRequirements(m_device, m_buffer, &memoryRequirements);
     //
     vkMapMemory(m_device, m_bufferMemory, 0, memoryRequirements.size, 0, reinterpret_cast<void **>(&data));
-    for (size_t i = 0; i < std::min(size_t(memoryRequirements.size), size); i += 1)
-    {
-      reinterpret_cast<uint8_t *>(out)[i] = reinterpret_cast<uint8_t *>(data)[i];
-    }
-    //
+    memcpy(out, data, std::min(size_t(memoryRequirements.size), size));
     vkUnmapMemory(m_device, m_bufferMemory);
   }
 

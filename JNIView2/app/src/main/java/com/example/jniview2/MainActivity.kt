@@ -12,7 +12,8 @@ import android.widget.ImageView
 import android.graphics.Bitmap
 import android.widget.TextView
 import kotlinx.android.synthetic.main.activity_main.*
-
+import android.os.CountDownTimer
+import java.time.LocalTime
 
 
 class MainActivity : AppCompatActivity() {
@@ -51,6 +52,8 @@ class MainActivity : AppCompatActivity() {
 class CustomImageView : ImageView {
     private var initialized: Boolean = false
     private var drawBitmap: Bitmap = Bitmap.createBitmap(1024, 1024, Bitmap.Config.ARGB_8888)
+    private var drawCount: Long = 0
+    private var drawTimeSec: Double = 0.0
     private external fun initNative(shader: ByteArray)
     private external fun renderNative(bitmap: Bitmap)
 
@@ -65,6 +68,25 @@ class CustomImageView : ImageView {
     fun renderReady(shader: ByteArray) {
         this.initNative(shader)
         this.initialized = true
+
+        val textView: TextView = (this.context as MainActivity).findViewById(R.id.textView)
+
+        object : CountDownTimer(0xFFFFFFFF, 1000) {
+            private var lastTickCount: Long = 0
+            private var lastTickNanoSec: Long = LocalTime.now().toNanoOfDay()
+            private var firstDrawNanoSec: Long = LocalTime.now().toNanoOfDay()
+
+            override fun onTick(millisUntilFinished: Long) {
+                val now = LocalTime.now().toNanoOfDay()
+                val fps: Double = (drawCount - this.lastTickCount).toDouble() / (1e-9 * (now - this.lastTickNanoSec + 1).toDouble())
+                val loadSec: Double = drawTimeSec / (1e-9 * (now - this.firstDrawNanoSec + 1).toDouble())
+                textView.text = ("FPS: %.2f, Load: %.2f".format(fps, loadSec))
+                this.lastTickCount = drawCount
+                this.lastTickNanoSec = now
+            }
+            override fun onFinish() {
+            }
+        }.start()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -72,12 +94,15 @@ class CustomImageView : ImageView {
             return
         }
 
-        var textView = (this.context as MainActivity).findViewById<TextView>(R.id.textView)
-        textView.text = "12345"
-
+        val before = LocalTime.now().toNanoOfDay()
         this.renderNative(this.drawBitmap)
         canvas.drawBitmap(this.drawBitmap, 0.0f, 0.0f, null)
         this.invalidate()
+        val after = LocalTime.now().toNanoOfDay()
+
+        val diff = after - before
+        this.drawCount += 1
+        this.drawTimeSec += 1e-9 * diff.toDouble()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {

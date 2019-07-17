@@ -78,12 +78,14 @@ class CustomImageView : ImageView {
 
             override fun onTick(millisUntilFinished: Long) {
                 val now = LocalTime.now().toNanoOfDay()
-                val fps: Double = (drawCount - this.lastTickCount).toDouble() / (1e-9 * (now - this.lastTickNanoSec + 1).toDouble())
+                val fps: Double =
+                    (drawCount - this.lastTickCount).toDouble() / (1e-9 * (now - this.lastTickNanoSec + 1).toDouble())
                 val loadSec: Double = drawTimeSec / (1e-9 * (now - this.firstDrawNanoSec + 1).toDouble())
                 textView.text = ("FPS: %.2f, Load: %.2f".format(fps, loadSec))
                 this.lastTickCount = drawCount
                 this.lastTickNanoSec = now
             }
+
             override fun onFinish() {
             }
         }.start()

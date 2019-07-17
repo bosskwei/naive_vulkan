@@ -45,7 +45,7 @@ public:
         m_pipeline->feedBuffer(0, 0, m_buffer, 0, 1024 * 1024 * 4);
         LOGI("5. Buffer ready");
 
-        m_command = m_pipeline->createCommand();
+        m_command = m_pipeline->createCommand(1024, 1024);
         LOGI("6. Command ready");
     }
 

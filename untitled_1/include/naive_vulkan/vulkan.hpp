@@ -5,6 +5,8 @@
 #include <tuple>
 #include <vector>
 #include <memory>
+#include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 
@@ -108,7 +110,7 @@ public:
     vkGetBufferMemoryRequirements(m_device, m_buffer, &memoryRequirements);
     //
     vkMapMemory(m_device, m_bufferMemory, 0, memoryRequirements.size, 0, reinterpret_cast<void **>(&data));
-    memcpy(out, data, std::min(size_t(memoryRequirements.size), size));
+    std::memcpy(out, data, std::min(size_t(memoryRequirements.size), size));
     vkUnmapMemory(m_device, m_bufferMemory);
   }
 
@@ -144,29 +146,6 @@ public:
          const std::vector<uint8_t> &spvByteCode,
          VkShaderStageFlagBits shaderStage) : m_device(device), m_shaderStage(shaderStage)
   {
-    // Shader code
-    /*
-    auto readBinaryFile = [](const std::string &filePath) -> std::vector<uint8_t> {
-      std::fstream file(filePath, std::ios::in | std::ios::binary);
-      if (!file.is_open())
-      {
-        throw std::runtime_error("failed to open file!");
-      }
-
-      file.seekg(0, std::ios_base::end);
-      size_t fileSize = (size_t)file.tellg();
-      std::vector<uint8_t> fileBuffer(fileSize);
-
-      file.seekg(0, std::ios_base::beg);
-      file.read(reinterpret_cast<char *>(fileBuffer.data()), fileSize);
-
-      file.close();
-
-      return fileBuffer;
-    };
-    std::vector<uint8_t> compShaderCode = readBinaryFile(shaderPath);
-    */
-
     // Shader module
     auto createShaderModule = [&](const std::vector<uint8_t> &code) -> VkShaderModule {
       VkShaderModuleCreateInfo createInfo = {};
@@ -247,7 +226,8 @@ public:
           const VkPipelineLayout &pipelineLayout,
           const VkPipeline &computePipeline,
           const std::vector<VkDescriptorSet> &descriptorSets,
-          const VkCommandPool &commandPool)
+          const VkCommandPool &commandPool,
+          const std::vector<uint32_t> &workers)
       : m_device(device), m_graphicsQueue(graphicsQueue), m_commandPool(commandPool)
   {
     // Create
@@ -273,8 +253,17 @@ public:
     }
 
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, 0, descriptorSets.size(), descriptorSets.data(), 0, VK_NULL_HANDLE);
-    vkCmdDispatch(m_commandBuffer, 1024, 1024, 1);
+    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, 0, static_cast<uint32_t>(descriptorSets.size()), descriptorSets.data(), 0, VK_NULL_HANDLE);
+
+    if (workers.size() == 0) {
+        vkCmdDispatch(m_commandBuffer, 0, 0, 0);
+    } else if (workers.size() == 1) {
+        vkCmdDispatch(m_commandBuffer, workers[0], 1, 1);
+    } else if (workers.size() == 2) {
+        vkCmdDispatch(m_commandBuffer, workers[0], workers[1], 1);
+    } else {
+        vkCmdDispatch(m_commandBuffer, workers[0], workers[1], workers[2]);
+    }
 
     if (vkEndCommandBuffer(m_commandBuffer) != VK_SUCCESS)
     {
@@ -332,7 +321,7 @@ public:
     vkDestroyPipeline(m_device, m_computePipeline, VK_NULL_HANDLE);
     vkDestroyPipelineLayout(m_device, m_pipelineLayout, VK_NULL_HANDLE);
     //
-    vkFreeDescriptorSets(m_device, m_descriptorPool, m_descriptorSets.size(), m_descriptorSets.data());
+    vkFreeDescriptorSets(m_device, m_descriptorPool, static_cast<uint32_t>(m_descriptorSets.size()), m_descriptorSets.data());
     for (auto &setLayout : m_descriptorSetLayouts)
     {
       vkDestroyDescriptorSetLayout(m_device, setLayout, VK_NULL_HANDLE);
@@ -363,14 +352,16 @@ public:
     vkUpdateDescriptorSets(m_device, 1, &writeDescriptorSet, 0, VK_NULL_HANDLE);
   }
 
-  std::unique_ptr<Command> createCommand()
+  std::unique_ptr<Command> createCommand(uint32_t x, uint32_t y = 1, uint32_t z = 1)
   {
+      std::vector<uint32_t> workers = {x, y, z};
     return std::make_unique<Command>(m_device,
                                      m_graphicsQueue,
                                      m_pipelineLayout,
                                      m_computePipeline,
                                      m_descriptorSets,
-                                     m_commandPool);
+                                     m_commandPool,
+                                     workers);
   }
 
 private:
@@ -390,7 +381,7 @@ private:
 
     VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
     descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    descriptorPoolCreateInfo.maxSets = setsBindings.size();
+    descriptorPoolCreateInfo.maxSets = static_cast<uint32_t>(setsBindings.size());
     descriptorPoolCreateInfo.poolSizeCount = 1;
     descriptorPoolCreateInfo.pPoolSizes = &descriptorPoolSize;
     descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -416,7 +407,7 @@ private:
 
       VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
       descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-      descriptorSetLayoutCreateInfo.bindingCount = setLayoutBindings.size();
+      descriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
       descriptorSetLayoutCreateInfo.pBindings = setLayoutBindings.data();
 
       VkDescriptorSetLayout descriptorSetLayout;
@@ -431,7 +422,7 @@ private:
     VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
     descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     descriptorSetAllocateInfo.descriptorPool = m_descriptorPool;
-    descriptorSetAllocateInfo.descriptorSetCount = m_descriptorSetLayouts.size();
+    descriptorSetAllocateInfo.descriptorSetCount = static_cast<uint32_t>(m_descriptorSetLayouts.size());
     descriptorSetAllocateInfo.pSetLayouts = m_descriptorSetLayouts.data();
 
     m_descriptorSets.resize(m_descriptorSetLayouts.size());
@@ -453,7 +444,7 @@ private:
     // Pipeline layout
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
     pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutCreateInfo.setLayoutCount = m_descriptorSetLayouts.size();
+    pipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(m_descriptorSetLayouts.size());
     pipelineLayoutCreateInfo.pSetLayouts = m_descriptorSetLayouts.data();
 
     if (vkCreatePipelineLayout(m_device, &pipelineLayoutCreateInfo, VK_NULL_HANDLE, &m_pipelineLayout) != VK_SUCCESS)
@@ -553,6 +544,31 @@ public:
                                        VkShaderStageFlagBits shaderStage) const
   {
     return std::make_unique<Shader>(m_device, spvByteCode, shaderStage);
+  }
+
+  std::unique_ptr<Shader> createShader(const std::string &shaderPath,
+                                       VkShaderStageFlagBits shaderStage) const
+  {
+    auto readBinaryFile = [](const std::string &filePath) -> std::vector<uint8_t> {
+      std::fstream file(filePath, std::ios::in | std::ios::binary);
+      if (!file.is_open())
+      {
+        throw std::runtime_error("failed to open file!");
+      }
+
+      file.seekg(0, std::ios_base::end);
+      size_t fileSize = (size_t)file.tellg();
+      std::vector<uint8_t> fileBuffer(fileSize);
+
+      file.seekg(0, std::ios_base::beg);
+      file.read(reinterpret_cast<char *>(fileBuffer.data()), fileSize);
+
+      file.close();
+
+      return fileBuffer;
+    };
+    std::vector<uint8_t> spvByteCode = readBinaryFile(shaderPath);
+    return this->createShader(spvByteCode, shaderStage);
   }
 
   std::unique_ptr<ComputePipeline> createComputePipeline(const std::unique_ptr<Shader> &shader,

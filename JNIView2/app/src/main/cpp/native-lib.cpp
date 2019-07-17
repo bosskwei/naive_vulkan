@@ -76,7 +76,7 @@ std::unique_ptr<Engine> engine;
 
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_jniview2_CustomImageView_initNative(JNIEnv *env, jobject obj, jbyteArray bytes) {
+Java_com_example_jniview2_CustomSurfaceView_initNative(JNIEnv *env, jobject obj, jbyteArray bytes) {
     assert(obj);
 
     jsize size = env->GetArrayLength(bytes);
@@ -94,7 +94,7 @@ Java_com_example_jniview2_CustomImageView_initNative(JNIEnv *env, jobject obj, j
 
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_jniview2_CustomImageView_renderNative(JNIEnv *env, jobject obj, jobject bitmap) {
+Java_com_example_jniview2_CustomSurfaceView_renderNative(JNIEnv *env, jobject obj, jobject bitmap) {
     assert(obj);
 
     int ret;

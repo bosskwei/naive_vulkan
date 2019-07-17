@@ -13,6 +13,9 @@ import android.graphics.Bitmap
 import android.widget.TextView
 import kotlinx.android.synthetic.main.activity_main.*
 import android.os.CountDownTimer
+import android.util.Log
+import android.view.SurfaceHolder
+import android.view.SurfaceView
 import java.time.LocalTime
 
 
@@ -27,9 +30,9 @@ class MainActivity : AppCompatActivity() {
                 .setAction("Action", null).show()
         }
 
-        val imageView: CustomImageView = this.findViewById(R.id.imageView)
+        val surfaceView: CustomSurfaceView = this.findViewById(R.id.surfaceView)
         val shader: ByteArray = this.assets.open("shader/comp_1.spv").readBytes()
-        imageView.renderReady(shader)
+        surfaceView.renderReady(shader)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -49,7 +52,7 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-class CustomImageView : ImageView {
+class CustomSurfaceView : SurfaceView, SurfaceHolder.Callback, Runnable {
     private var initialized: Boolean = false
     private var drawBitmap: Bitmap = Bitmap.createBitmap(1024, 1024, Bitmap.Config.ARGB_8888)
     private var drawCount: Long = 0
@@ -57,13 +60,14 @@ class CustomImageView : ImageView {
     private external fun initNative(shader: ByteArray)
     private external fun renderNative(bitmap: Bitmap)
 
-    init {
-        System.loadLibrary("native-lib")
-    }
-
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet) : super(context, attrs)
     constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
+
+    init {
+        System.loadLibrary("native-lib")
+        this.holder.addCallback(this)
+    }
 
     fun renderReady(shader: ByteArray) {
         this.initNative(shader)
@@ -91,24 +95,34 @@ class CustomImageView : ImageView {
         }.start()
     }
 
-    override fun onDraw(canvas: Canvas) {
-        if (!this.initialized) {
-            return
-        }
-
-        val before = LocalTime.now().toNanoOfDay()
-        this.renderNative(this.drawBitmap)
-        canvas.drawBitmap(this.drawBitmap, 0.0f, 0.0f, null)
-        this.invalidate()
-        val after = LocalTime.now().toNanoOfDay()
-
-        val diff = after - before
-        this.drawCount += 1
-        this.drawTimeSec += 1e-9 * diff.toDouble()
+    override fun surfaceCreated(holder: SurfaceHolder?) {
+        Log.i("CustomSurfaceView", "surfaceCreated()")
+        Thread(this).start()
     }
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        // drawBitmap = Bitmap.createBitmap(min(h, w), min(h, w), Bitmap.Config.ARGB_8888)
-        // super.onSizeChanged(w, h, oldw, oldh)
+    override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
+        Log.i("CustomSurfaceView", "surfaceChanged()")
+    }
+
+    override fun surfaceDestroyed(holder: SurfaceHolder?) {
+        Log.i("CustomSurfaceView", "surfaceDestroyed()")
+    }
+
+    override fun run() {
+        Log.i("CustomSurfaceView", "run()")
+        while (holder != null) {
+            val canvas: Canvas = holder.lockCanvas() ?: return
+
+            val before = LocalTime.now().toNanoOfDay()
+            this.renderNative(this.drawBitmap)
+            canvas.drawBitmap(this.drawBitmap, 0.0f, 0.0f, null)
+            val after = LocalTime.now().toNanoOfDay()
+
+            val diff = after - before
+            this.drawCount += 1
+            this.drawTimeSec += 1e-9 * diff.toDouble()
+
+            holder.unlockCanvasAndPost(canvas)
+        }
     }
 }

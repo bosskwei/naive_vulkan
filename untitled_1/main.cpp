@@ -428,14 +428,18 @@ int main(int argc, char **argv)
                                        VK_SHADER_STAGE_COMPUTE_BIT);
     std::cout << "3. Shader ready" << std::endl;
 
-    auto pipeline = device->createComputePipeline(shader, {{std::make_tuple(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)}});
+    auto pipeline = device->createComputePipeline(shader, {{std::make_tuple(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER), std::make_tuple(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)}});
     std::cout << "4. Pipeline ready" << std::endl;
 
     auto buffer = device->createBuffer(1024, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     pipeline->feedBuffer(0, 0, buffer, 0, 1024);
+    auto uniform = device->createBuffer(2 * 4, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    pipeline->feedBuffer(0, 0, uniform, 0, 2 * 4);
+    float aa[2] = {0.0f, 2.0f};
+    uniform->update(aa, sizeof(aa));
     std::cout << "5. Buffer ready" << std::endl;
 
-    auto command = pipeline->createCommand();
+    auto command = pipeline->createCommand(64);
     auto fence = command->submit();
     std::cout << "6. Command ready" << std::endl;
 

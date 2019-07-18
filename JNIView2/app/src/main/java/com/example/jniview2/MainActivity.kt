@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val surfaceView: CustomSurfaceView = this.findViewById(R.id.surfaceView)
-        val shader: ByteArray = this.assets.open("shader/comp_1.spv").readBytes()
+        val shader: ByteArray = this.assets.open("shader/comp_2.spv").readBytes()
         surfaceView.renderReady(shader)
     }
 

@@ -39,11 +39,16 @@ public:
         m_shader = m_device->createShader(code, VK_SHADER_STAGE_COMPUTE_BIT);
         LOGI("3. Shader ready");
 
-        m_pipeline = m_device->createComputePipeline(m_shader, {{std::make_tuple(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)}});
+        m_pipeline = m_device->createComputePipeline(m_shader, {{std::make_tuple(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER), std::make_tuple(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)}});
         LOGI("4. Pipeline ready");
 
         m_buffer = m_device->createBuffer(1024 * 1024 * 4, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         m_pipeline->feedBuffer(0, 0, m_buffer, 0, 1024 * 1024 * 4);
+        m_uniform = m_device->createBuffer(2 * 4, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        m_pipeline->feedBuffer(0, 0, m_uniform, 0, 2 * 4);
+
+        float uniform[2] = {0.0f, 2.0f};
+        m_uniform->update(uniform, sizeof(uniform));
         LOGI("5. Buffer ready");
 
         m_command = m_pipeline->createCommand(1024, 1024);
@@ -69,6 +74,7 @@ private:
     std::unique_ptr<vk::Shader> m_shader;
     std::unique_ptr<vk::ComputePipeline> m_pipeline;
     std::unique_ptr<vk::Buffer> m_buffer;
+    std::unique_ptr<vk::Buffer> m_uniform;
     std::unique_ptr<vk::Command> m_command;
     bool m_firstRender;
     std::unique_ptr<vk::Fence> m_fence;

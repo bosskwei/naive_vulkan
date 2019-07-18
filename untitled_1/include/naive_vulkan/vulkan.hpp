@@ -3,6 +3,7 @@
 
 // clang-format off
 #include <tuple>
+#include <array>
 #include <vector>
 #include <memory>
 #include <cstdint>
@@ -38,6 +39,15 @@ public:
          uint32_t size,
          VkBufferUsageFlags usage,
          VkMemoryPropertyFlags properties) : m_physicalDevice(physicalDevice), m_device(device) {
+    //
+    if (usage == VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {
+      m_descType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    } else if (usage == VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {
+      m_descType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    } else {
+      throw std::runtime_error("not implemented");
+    }
+
     // Buffer
     VkBufferCreateInfo bufferCreateInfo = {};
     bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -76,6 +86,20 @@ public:
   }
   const VkDeviceMemory &mem() const {
     return m_bufferMemory;
+  }
+
+  const VkDescriptorType &descType() const {
+    return m_descType;
+  }
+
+  void update(void *in, size_t size) {
+    void *data;
+    VkMemoryRequirements memoryRequirements = {};
+    vkGetBufferMemoryRequirements(m_device, m_buffer, &memoryRequirements);
+    //
+    vkMapMemory(m_device, m_bufferMemory, 0, memoryRequirements.size, 0, reinterpret_cast<void **>(&data));
+    std::memcpy(data, in, std::min(size_t(memoryRequirements.size), size));
+    vkUnmapMemory(m_device, m_bufferMemory);
   }
 
   void print() const {
@@ -121,6 +145,7 @@ private:
   const VkDevice &m_device;
   VkBuffer m_buffer;
   VkDeviceMemory m_bufferMemory;
+  VkDescriptorType m_descType;
 };
 
 class Shader {
@@ -319,7 +344,7 @@ public:
     writeDescriptorSet.dstSet = m_descriptorSets[set];
     writeDescriptorSet.dstBinding = binding;
     writeDescriptorSet.descriptorCount = 1;
-    writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    writeDescriptorSet.descriptorType = buffer->descType();
     writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
     vkUpdateDescriptorSets(m_device, 1, &writeDescriptorSet, 0, VK_NULL_HANDLE);
   }
@@ -345,15 +370,35 @@ private:
     // Check order, set
 
     // Pool
-    VkDescriptorPoolSize descriptorPoolSize = {};
-    descriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptorPoolSize.descriptorCount = 1;
+    std::array<VkDescriptorPoolSize, 2> descriptorPoolSizes = {};
+    descriptorPoolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorPoolSizes[0].descriptorCount = 0;
+    descriptorPoolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptorPoolSizes[1].descriptorCount = 0;
+
+    for (const auto &bindings : setsBindings) {
+      for (const auto &bind : bindings) {
+        switch (std::get<1>(bind)) {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER: {
+          descriptorPoolSizes[0].descriptorCount += 1;
+          break;
+        }
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER: {
+          descriptorPoolSizes[1].descriptorCount += 1;
+          break;
+        }
+        default: {
+          throw std::runtime_error("not implemented");
+        }
+        }
+      }
+    }
 
     VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
     descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptorPoolCreateInfo.maxSets = static_cast<uint32_t>(setsBindings.size());
-    descriptorPoolCreateInfo.poolSizeCount = 1;
-    descriptorPoolCreateInfo.pPoolSizes = &descriptorPoolSize;
+    descriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(descriptorPoolSizes.size());
+    descriptorPoolCreateInfo.pPoolSizes = descriptorPoolSizes.data();
     descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
     if (vkCreateDescriptorPool(m_device, &descriptorPoolCreateInfo, VK_NULL_HANDLE, &m_descriptorPool) != VK_SUCCESS) {
@@ -364,7 +409,7 @@ private:
     for (const auto &bindings : setsBindings) {
       std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings;
 
-      for (auto const &bind : bindings) {
+      for (const auto &bind : bindings) {
         VkDescriptorSetLayoutBinding setLayoutBinding = {};
         std::tie(setLayoutBinding.binding, setLayoutBinding.descriptorType) = bind;
         setLayoutBinding.descriptorCount = 1;

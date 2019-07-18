@@ -9,6 +9,7 @@
 #include <naive_vulkan/vulkan.hpp>
 
 #define LOG_TAG "native"
+#define LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
 #define LOGI(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
 #define LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
 
@@ -56,7 +57,7 @@ public:
             return;
         }
         m_fence->wait();
-        LOGI("7. execute ready");
+        LOGD("7. execute ready");
 
         m_buffer->dump(out, size);
         m_fence = m_command->submit();

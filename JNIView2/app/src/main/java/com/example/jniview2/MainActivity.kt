@@ -8,14 +8,16 @@ import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.ImageView
 import android.graphics.Bitmap
+import android.graphics.PixelFormat
 import android.widget.TextView
 import kotlinx.android.synthetic.main.activity_main.*
 import android.os.CountDownTimer
 import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import java.io.BufferedReader
+import java.io.InputStream
 import java.time.LocalTime
 
 
@@ -67,6 +69,7 @@ class CustomSurfaceView : SurfaceView, SurfaceHolder.Callback, Runnable {
     init {
         System.loadLibrary("native-lib")
         this.holder.addCallback(this)
+        this.holder.setFormat(PixelFormat.RGBA_8888)
     }
 
     fun renderReady(shader: ByteArray) {
@@ -109,7 +112,7 @@ class CustomSurfaceView : SurfaceView, SurfaceHolder.Callback, Runnable {
     }
 
     override fun run() {
-        Log.i("CustomSurfaceView", "run()")
+        Log.i("CustomSurfaceView", "run() begin")
         while (holder != null) {
             val canvas: Canvas = holder.lockCanvas() ?: return
 
@@ -124,5 +127,6 @@ class CustomSurfaceView : SurfaceView, SurfaceHolder.Callback, Runnable {
 
             holder.unlockCanvasAndPost(canvas)
         }
+        Log.i("CustomSurfaceView", "run() end")
     }
 }

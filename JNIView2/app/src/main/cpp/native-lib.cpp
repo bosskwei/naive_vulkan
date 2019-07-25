@@ -46,9 +46,6 @@ public:
         m_pipeline->feedBuffer(0, 0, m_buffer, 0, 1024 * 1024 * 4);
         m_uniform = m_device->createBuffer(2 * 4, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         m_pipeline->feedBuffer(0, 0, m_uniform, 0, 2 * 4);
-
-        float uniform[2] = {0.0f, 2.0f};
-        m_uniform->update(uniform, sizeof(uniform));
         LOGI("5. Buffer ready");
 
         m_command = m_pipeline->createCommand(1024, 1024);
@@ -57,14 +54,24 @@ public:
 
     void render(void *out, size_t size) {
         if (m_firstRender) {
-            m_fence = m_command->submit();
-            m_firstRender = false;
-            return;
+          float uniform[2] = {0.0f, 2.0f};
+          m_uniform->update(uniform, sizeof(uniform));
+
+          m_fence = m_command->submit();
+          m_firstRender = false;
+          return;
         }
         m_fence->wait();
         LOGD("7. execute ready");
 
         m_buffer->dump(out, size);
+
+        static int counter = 0;
+        counter += 1;
+
+        float uniform[2] = {0.0f, float(1000 - counter) / 500};
+        m_uniform->update(uniform, sizeof(uniform));
+
         m_fence = m_command->submit();
     }
 

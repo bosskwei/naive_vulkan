@@ -22,8 +22,7 @@ namespace std {
 #if __cplusplus <= 201103L
 // note: this implementation does not disable this overload for array types
 template <typename T, typename... Args>
-std::unique_ptr<T> make_unique(Args &&... args)
-{
+std::unique_ptr<T> make_unique(Args &&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 #endif
@@ -34,11 +33,10 @@ namespace vk {
 class Buffer {
 public:
   Buffer() = delete;
-  Buffer(const VkPhysicalDevice &physicalDevice,
-         const VkDevice &device,
-         uint32_t size,
-         VkBufferUsageFlags usage,
-         VkMemoryPropertyFlags properties) : m_physicalDevice(physicalDevice), m_device(device) {
+  Buffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device,
+         uint32_t size, VkBufferUsageFlags usage,
+         VkMemoryPropertyFlags properties)
+      : m_physicalDevice(physicalDevice), m_device(device) {
     //
     if (usage == VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {
       m_descType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -52,10 +50,13 @@ public:
     VkBufferCreateInfo bufferCreateInfo = {};
     bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferCreateInfo.size = size;
-    bufferCreateInfo.usage = usage;                           // buffer is used as a storage buffer.
-    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // buffer is exclusive to a single queue family at a time.
+    bufferCreateInfo.usage = usage; // buffer is used as a storage buffer.
+    bufferCreateInfo.sharingMode =
+        VK_SHARING_MODE_EXCLUSIVE; // buffer is exclusive to a single queue
+                                   // family at a time.
 
-    if (vkCreateBuffer(m_device, &bufferCreateInfo, VK_NULL_HANDLE, &m_buffer) != VK_SUCCESS) {
+    if (vkCreateBuffer(m_device, &bufferCreateInfo, VK_NULL_HANDLE,
+                       &m_buffer) != VK_SUCCESS) {
       throw std::runtime_error("failed to create buffers!");
     }
 
@@ -66,9 +67,11 @@ public:
     VkMemoryAllocateInfo allocateInfo = {};
     allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocateInfo.allocationSize = memoryRequirements.size;
-    allocateInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties);
+    allocateInfo.memoryTypeIndex =
+        findMemoryType(memoryRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(m_device, &allocateInfo, VK_NULL_HANDLE, &m_bufferMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(m_device, &allocateInfo, VK_NULL_HANDLE,
+                         &m_bufferMemory) != VK_SUCCESS) {
       throw std::runtime_error("failed to allocate buffer memory!");
     }
 
@@ -81,23 +84,18 @@ public:
   }
 
 public:
-  const VkBuffer &buf() const {
-    return m_buffer;
-  }
-  const VkDeviceMemory &mem() const {
-    return m_bufferMemory;
-  }
+  const VkBuffer &buf() const { return m_buffer; }
+  const VkDeviceMemory &mem() const { return m_bufferMemory; }
 
-  const VkDescriptorType &descType() const {
-    return m_descType;
-  }
+  const VkDescriptorType &descType() const { return m_descType; }
 
   void update(void *in, size_t size) {
     void *data;
     VkMemoryRequirements memoryRequirements = {};
     vkGetBufferMemoryRequirements(m_device, m_buffer, &memoryRequirements);
     //
-    vkMapMemory(m_device, m_bufferMemory, 0, memoryRequirements.size, 0, reinterpret_cast<void **>(&data));
+    vkMapMemory(m_device, m_bufferMemory, 0, memoryRequirements.size, 0,
+                reinterpret_cast<void **>(&data));
     std::memcpy(data, in, std::min(size_t(memoryRequirements.size), size));
     vkUnmapMemory(m_device, m_bufferMemory);
   }
@@ -107,7 +105,8 @@ public:
     VkMemoryRequirements memoryRequirements = {};
     vkGetBufferMemoryRequirements(m_device, m_buffer, &memoryRequirements);
     //
-    vkMapMemory(m_device, m_bufferMemory, 0, memoryRequirements.size, 0, reinterpret_cast<void **>(&data));
+    vkMapMemory(m_device, m_bufferMemory, 0, memoryRequirements.size, 0,
+                reinterpret_cast<void **>(&data));
     for (size_t i = 0; i < memoryRequirements.size / sizeof(uint32_t); i += 1) {
       std::cout << reinterpret_cast<uint32_t *>(data)[i] << " ";
     }
@@ -121,18 +120,22 @@ public:
     VkMemoryRequirements memoryRequirements = {};
     vkGetBufferMemoryRequirements(m_device, m_buffer, &memoryRequirements);
     //
-    vkMapMemory(m_device, m_bufferMemory, 0, memoryRequirements.size, 0, reinterpret_cast<void **>(&data));
+    vkMapMemory(m_device, m_bufferMemory, 0, memoryRequirements.size, 0,
+                reinterpret_cast<void **>(&data));
     std::memcpy(out, data, std::min(size_t(memoryRequirements.size), size));
     vkUnmapMemory(m_device, m_bufferMemory);
   }
 
 private:
-  uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+  uint32_t findMemoryType(uint32_t typeFilter,
+                          VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-      if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+      if ((typeFilter & (1 << i)) &&
+          (memProperties.memoryTypes[i].propertyFlags & properties) ==
+              properties) {
         return i;
       }
     }
@@ -151,18 +154,20 @@ private:
 class Shader {
 public:
   Shader() = delete;
-  Shader(const VkDevice &device,
-         const std::vector<uint8_t> &spvByteCode,
-         VkShaderStageFlagBits shaderStage) : m_device(device), m_shaderStage(shaderStage) {
+  Shader(const VkDevice &device, const std::vector<uint8_t> &spvByteCode,
+         VkShaderStageFlagBits shaderStage)
+      : m_device(device), m_shaderStage(shaderStage) {
     // Shader module
-    auto createShaderModule = [&](const std::vector<uint8_t> &code) -> VkShaderModule {
+    auto createShaderModule =
+        [&](const std::vector<uint8_t> &code) -> VkShaderModule {
       VkShaderModuleCreateInfo createInfo = {};
       createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
       createInfo.codeSize = code.size();
       createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
 
       VkShaderModule shaderModule;
-      if (vkCreateShaderModule(m_device, &createInfo, VK_NULL_HANDLE, &shaderModule) != VK_SUCCESS) {
+      if (vkCreateShaderModule(m_device, &createInfo, VK_NULL_HANDLE,
+                               &shaderModule) != VK_SUCCESS) {
         throw std::runtime_error("failed to create shader module!");
       }
       return shaderModule;
@@ -174,13 +179,9 @@ public:
   }
 
 public:
-  VkShaderStageFlagBits stage() const {
-    return m_shaderStage;
-  }
+  VkShaderStageFlagBits stage() const { return m_shaderStage; }
 
-  const VkShaderModule &module() const {
-    return m_compShaderModule;
-  }
+  const VkShaderModule &module() const { return m_compShaderModule; }
 
 private:
   const VkDevice &m_device;
@@ -197,14 +198,10 @@ public:
     fenceCreateInfo.flags = 0;
     vkCreateFence(m_device, &fenceCreateInfo, VK_NULL_HANDLE, &m_fence);
   }
-  ~Fence() {
-    vkDestroyFence(m_device, m_fence, VK_NULL_HANDLE);
-  }
+  ~Fence() { vkDestroyFence(m_device, m_fence, VK_NULL_HANDLE); }
 
 public:
-  const VkFence &get() const {
-    return m_fence;
-  }
+  const VkFence &get() const { return m_fence; }
 
   void wait() const {
     // wait finish
@@ -219,14 +216,14 @@ private:
 class Command {
 public:
   Command() = delete;
-  Command(const VkDevice &device,
-          const VkQueue &graphicsQueue,
+  Command(const VkDevice &device, const VkQueue &graphicsQueue,
           const VkPipelineLayout &pipelineLayout,
           const VkPipeline &computePipeline,
           const std::vector<VkDescriptorSet> &descriptorSets,
           const VkCommandPool &commandPool,
           const std::vector<uint32_t> &workers)
-      : m_device(device), m_graphicsQueue(graphicsQueue), m_commandPool(commandPool) {
+      : m_device(device), m_graphicsQueue(graphicsQueue),
+        m_commandPool(commandPool) {
     // Create
     VkCommandBufferAllocateInfo allocateInfo = {};
     allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -234,7 +231,8 @@ public:
     allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocateInfo.commandBufferCount = 1;
 
-    if (vkAllocateCommandBuffers(device, &allocateInfo, &m_commandBuffer) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(device, &allocateInfo, &m_commandBuffer) !=
+        VK_SUCCESS) {
       throw std::runtime_error("failed to allocate command buffers!");
     }
 
@@ -247,15 +245,12 @@ public:
       throw std::runtime_error("failed to begin recording command buffer!");
     }
 
-    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-    vkCmdBindDescriptorSets(m_commandBuffer,
-                            VK_PIPELINE_BIND_POINT_COMPUTE,
-                            pipelineLayout,
-                            0,
+    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                      computePipeline);
+    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            pipelineLayout, 0,
                             static_cast<uint32_t>(descriptorSets.size()),
-                            descriptorSets.data(),
-                            0,
-                            VK_NULL_HANDLE);
+                            descriptorSets.data(), 0, VK_NULL_HANDLE);
 
     if (workers.size() == 0) {
       vkCmdDispatch(m_commandBuffer, 0, 0, 0);
@@ -299,13 +294,12 @@ private:
 class ComputePipeline {
 public:
   ComputePipeline() = delete;
-  ComputePipeline(const VkDevice &device,
-                  uint32_t queueFamilyIndex,
-                  const VkQueue &graphicsQueue,
-                  const std::unique_ptr<Shader> &shader,
-                  const std::vector<std::vector<std::tuple<uint32_t, VkDescriptorType>>> &setsBindings)
-      : m_device(device),
-        m_queueFamilyIndex(queueFamilyIndex),
+  ComputePipeline(
+      const VkDevice &device, uint32_t queueFamilyIndex,
+      const VkQueue &graphicsQueue, const std::unique_ptr<Shader> &shader,
+      const std::vector<std::vector<std::tuple<uint32_t, VkDescriptorType>>>
+          &setsBindings)
+      : m_device(device), m_queueFamilyIndex(queueFamilyIndex),
         m_graphicsQueue(graphicsQueue) {
     initDescriptor(setsBindings);
     initPipeline(shader);
@@ -317,8 +311,7 @@ public:
     vkDestroyPipeline(m_device, m_computePipeline, VK_NULL_HANDLE);
     vkDestroyPipelineLayout(m_device, m_pipelineLayout, VK_NULL_HANDLE);
     //
-    vkFreeDescriptorSets(m_device,
-                         m_descriptorPool,
+    vkFreeDescriptorSets(m_device, m_descriptorPool,
                          static_cast<uint32_t>(m_descriptorSets.size()),
                          m_descriptorSets.data());
     for (auto &setLayout : m_descriptorSetLayouts) {
@@ -328,10 +321,8 @@ public:
   }
 
 public:
-  void feedBuffer(uint32_t set,
-                  uint32_t binding,
-                  const std::unique_ptr<Buffer> &buffer,
-                  uint32_t offset,
+  void feedBuffer(uint32_t set, uint32_t binding,
+                  const std::unique_ptr<Buffer> &buffer, uint32_t offset,
                   uint32_t range) {
     // Attach our buffer to this set
     VkDescriptorBufferInfo descriptorBufferInfo = {};
@@ -349,19 +340,18 @@ public:
     vkUpdateDescriptorSets(m_device, 1, &writeDescriptorSet, 0, VK_NULL_HANDLE);
   }
 
-  std::unique_ptr<Command> createCommand(uint32_t x, uint32_t y = 1, uint32_t z = 1) {
+  std::unique_ptr<Command> createCommand(uint32_t x, uint32_t y = 1,
+                                         uint32_t z = 1) {
     std::vector<uint32_t> workers = {x, y, z};
-    return std::make_unique<Command>(m_device,
-                                     m_graphicsQueue,
-                                     m_pipelineLayout,
-                                     m_computePipeline,
-                                     m_descriptorSets,
-                                     m_commandPool,
-                                     workers);
+    return std::make_unique<Command>(m_device, m_graphicsQueue,
+                                     m_pipelineLayout, m_computePipeline,
+                                     m_descriptorSets, m_commandPool, workers);
   }
 
 private:
-  void initDescriptor(const std::vector<std::vector<std::tuple<uint32_t, VkDescriptorType>>> &setsBindings) {
+  void initDescriptor(
+      const std::vector<std::vector<std::tuple<uint32_t, VkDescriptorType>>>
+          &setsBindings) {
     // ----------
     // n_sets = 2
     // setsBindings = {[(0, SSBO)], [(1, UBO), (1, SSBO)]}
@@ -387,21 +377,25 @@ private:
           descriptorPoolSizes[1].descriptorCount += 1;
           break;
         }
-        default: {
-          throw std::runtime_error("not implemented");
-        }
+        default: { throw std::runtime_error("not implemented"); }
         }
       }
     }
 
     VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
-    descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    descriptorPoolCreateInfo.maxSets = static_cast<uint32_t>(setsBindings.size());
-    descriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(descriptorPoolSizes.size());
+    descriptorPoolCreateInfo.sType =
+        VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptorPoolCreateInfo.maxSets =
+        static_cast<uint32_t>(setsBindings.size());
+    descriptorPoolCreateInfo.poolSizeCount =
+        static_cast<uint32_t>(descriptorPoolSizes.size());
     descriptorPoolCreateInfo.pPoolSizes = descriptorPoolSizes.data();
-    descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    descriptorPoolCreateInfo.flags =
+        VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-    if (vkCreateDescriptorPool(m_device, &descriptorPoolCreateInfo, VK_NULL_HANDLE, &m_descriptorPool) != VK_SUCCESS) {
+    if (vkCreateDescriptorPool(m_device, &descriptorPoolCreateInfo,
+                               VK_NULL_HANDLE,
+                               &m_descriptorPool) != VK_SUCCESS) {
       throw std::runtime_error("failed to create descriptor pool!");
     }
 
@@ -411,20 +405,24 @@ private:
 
       for (const auto &bind : bindings) {
         VkDescriptorSetLayoutBinding setLayoutBinding = {};
-        std::tie(setLayoutBinding.binding, setLayoutBinding.descriptorType) = bind;
+        std::tie(setLayoutBinding.binding, setLayoutBinding.descriptorType) =
+            bind;
         setLayoutBinding.descriptorCount = 1;
         setLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
         setLayoutBindings.push_back(setLayoutBinding);
       }
 
       VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
-      descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-      descriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
+      descriptorSetLayoutCreateInfo.sType =
+          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+      descriptorSetLayoutCreateInfo.bindingCount =
+          static_cast<uint32_t>(setLayoutBindings.size());
       descriptorSetLayoutCreateInfo.pBindings = setLayoutBindings.data();
 
       VkDescriptorSetLayout descriptorSetLayout;
-      if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCreateInfo, VK_NULL_HANDLE, &descriptorSetLayout)
-          != VK_SUCCESS) {
+      if (vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCreateInfo,
+                                      VK_NULL_HANDLE,
+                                      &descriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor!");
       }
       m_descriptorSetLayouts.push_back(descriptorSetLayout);
@@ -432,13 +430,16 @@ private:
 
     // Descriptor
     VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
-    descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptorSetAllocateInfo.sType =
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     descriptorSetAllocateInfo.descriptorPool = m_descriptorPool;
-    descriptorSetAllocateInfo.descriptorSetCount = static_cast<uint32_t>(m_descriptorSetLayouts.size());
+    descriptorSetAllocateInfo.descriptorSetCount =
+        static_cast<uint32_t>(m_descriptorSetLayouts.size());
     descriptorSetAllocateInfo.pSetLayouts = m_descriptorSetLayouts.data();
 
     m_descriptorSets.resize(m_descriptorSetLayouts.size());
-    if (vkAllocateDescriptorSets(m_device, &descriptorSetAllocateInfo, m_descriptorSets.data()) != VK_SUCCESS) {
+    if (vkAllocateDescriptorSets(m_device, &descriptorSetAllocateInfo,
+                                 m_descriptorSets.data()) != VK_SUCCESS) {
       throw std::runtime_error("failed to create descriptor pool!");
     }
   }
@@ -446,18 +447,23 @@ private:
   void initPipeline(const std::unique_ptr<Shader> &shader) {
     // Shader stages
     VkPipelineShaderStageCreateInfo compShaderStageInfo = {};
-    compShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    compShaderStageInfo.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     compShaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     compShaderStageInfo.module = shader->module();
     compShaderStageInfo.pName = "main";
 
     // Pipeline layout
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
-    pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(m_descriptorSetLayouts.size());
+    pipelineLayoutCreateInfo.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutCreateInfo.setLayoutCount =
+        static_cast<uint32_t>(m_descriptorSetLayouts.size());
     pipelineLayoutCreateInfo.pSetLayouts = m_descriptorSetLayouts.data();
 
-    if (vkCreatePipelineLayout(m_device, &pipelineLayoutCreateInfo, VK_NULL_HANDLE, &m_pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(m_device, &pipelineLayoutCreateInfo,
+                               VK_NULL_HANDLE,
+                               &m_pipelineLayout) != VK_SUCCESS) {
       throw std::runtime_error("failed to create pipeline layout!");
     }
 
@@ -467,8 +473,9 @@ private:
     pipelineCreateInfo.stage = compShaderStageInfo;
     pipelineCreateInfo.layout = m_pipelineLayout;
 
-    if (vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, VK_NULL_HANDLE, &m_computePipeline)
-        != VK_SUCCESS) {
+    if (vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1,
+                                 &pipelineCreateInfo, VK_NULL_HANDLE,
+                                 &m_computePipeline) != VK_SUCCESS) {
       throw std::runtime_error("failed to create compute pipeline!");
     }
   }
@@ -478,7 +485,8 @@ private:
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.queueFamilyIndex = m_queueFamilyIndex;
 
-    if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool) !=
+        VK_SUCCESS) {
       throw std::runtime_error("failed to create command pool!");
     }
   }
@@ -501,10 +509,8 @@ private:
 class Device {
 public:
   Device() = delete;
-  Device(VkPhysicalDevice physicalDevice,
-         uint32_t queueFamilyIndex)
-      : m_physicalDevice(physicalDevice),
-        m_queueFamilyIndex(queueFamilyIndex) {
+  Device(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex)
+      : m_physicalDevice(physicalDevice), m_queueFamilyIndex(queueFamilyIndex) {
     // Specifying the queues to be created
     VkDeviceQueueCreateInfo queueCreateInfo = {};
     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -526,39 +532,41 @@ public:
     createInfo.enabledLayerCount = 0;
 
     // create device
-    if (vkCreateDevice(m_physicalDevice, &createInfo, VK_NULL_HANDLE, &m_device) != VK_SUCCESS) {
+    if (vkCreateDevice(m_physicalDevice, &createInfo, VK_NULL_HANDLE,
+                       &m_device) != VK_SUCCESS) {
       throw std::runtime_error("failed to create logical device!");
     }
 
     // get graphic queue
     vkGetDeviceQueue(m_device, 0, 0, &m_graphicsQueue);
   }
-  ~Device() {
-    vkDestroyDevice(m_device, VK_NULL_HANDLE);
-  }
+  ~Device() { vkDestroyDevice(m_device, VK_NULL_HANDLE); }
 
 public:
-  std::unique_ptr<Buffer> createBuffer(uint32_t size,
-                                       VkBufferUsageFlags usage,
+  std::unique_ptr<Buffer> createBuffer(uint32_t size, VkBufferUsageFlags usage,
                                        VkMemoryPropertyFlags properties) const {
-    return std::make_unique<Buffer>(m_physicalDevice, m_device, size, usage, properties);
+    return std::make_unique<Buffer>(m_physicalDevice, m_device, size, usage,
+                                    properties);
   }
 
-  std::unique_ptr<Shader> createShader(const std::vector<uint8_t> &spvByteCode,
-                                       VkShaderStageFlagBits shaderStage) const {
+  std::unique_ptr<Shader>
+  createShader(const std::vector<uint8_t> &spvByteCode,
+               VkShaderStageFlagBits shaderStage) const {
     return std::make_unique<Shader>(m_device, spvByteCode, shaderStage);
   }
 
-  std::unique_ptr<Shader> createShader(const std::string &shaderPath,
-                                       VkShaderStageFlagBits shaderStage) const {
-    auto readBinaryFile = [](const std::string &filePath) -> std::vector<uint8_t> {
+  std::unique_ptr<Shader>
+  createShader(const std::string &shaderPath,
+               VkShaderStageFlagBits shaderStage) const {
+    auto readBinaryFile =
+        [](const std::string &filePath) -> std::vector<uint8_t> {
       std::fstream file(filePath, std::ios::in | std::ios::binary);
       if (!file.is_open()) {
         throw std::runtime_error("failed to open file!");
       }
 
       file.seekg(0, std::ios_base::end);
-      size_t fileSize = (size_t) file.tellg();
+      size_t fileSize = (size_t)file.tellg();
       std::vector<uint8_t> fileBuffer(fileSize);
 
       file.seekg(0, std::ios_base::beg);
@@ -572,10 +580,12 @@ public:
     return this->createShader(spvByteCode, shaderStage);
   }
 
-  std::unique_ptr<ComputePipeline> createComputePipeline(const std::unique_ptr<Shader> &shader,
-                                                         const std::vector<std::vector<std::tuple<uint32_t,
-                                                                                                  VkDescriptorType>>> &setsBindings) const {
-    return std::make_unique<ComputePipeline>(m_device, m_queueFamilyIndex, m_graphicsQueue, shader, setsBindings);
+  std::unique_ptr<ComputePipeline> createComputePipeline(
+      const std::unique_ptr<Shader> &shader,
+      const std::vector<std::vector<std::tuple<uint32_t, VkDescriptorType>>>
+          &setsBindings) const {
+    return std::make_unique<ComputePipeline>(
+        m_device, m_queueFamilyIndex, m_graphicsQueue, shader, setsBindings);
   }
 
 private:
@@ -619,10 +629,8 @@ struct Config {
 class Instance {
 public:
   Instance() = delete;
-  Instance(const std::string &appName,
-           uint32_t appVersion,
-           const std::string &engineName,
-           uint32_t engineVersion) {
+  Instance(const std::string &appName, uint32_t appVersion,
+           const std::string &engineName, uint32_t engineVersion) {
     // Information about our application.
     // Optional, driver could use this to optimize for specific app.
     VkApplicationInfo appInfo = {};
@@ -650,13 +658,12 @@ public:
 
     auto b = vkCreateInstance(&createInfo, VK_NULL_HANDLE, &m_instance);
 
-    if (vkCreateInstance(&createInfo, VK_NULL_HANDLE, &m_instance) != VK_SUCCESS) {
+    if (vkCreateInstance(&createInfo, VK_NULL_HANDLE, &m_instance) !=
+        VK_SUCCESS) {
       throw std::runtime_error("failed to create instance!");
     }
   }
-  ~Instance() {
-    vkDestroyInstance(m_instance, VK_NULL_HANDLE);
-  }
+  ~Instance() { vkDestroyInstance(m_instance, VK_NULL_HANDLE); }
 
 public:
   std::unique_ptr<Device> getDevice(VkQueueFlagBits queueFlag) const {
@@ -678,7 +685,8 @@ public:
   }
 
 private:
-  std::tuple<uint32_t, VkPhysicalDevice> initPhyscalDevice(const VkQueueFlagBits &queueFlag) const {
+  std::tuple<uint32_t, VkPhysicalDevice>
+  initPhyscalDevice(const VkQueueFlagBits &queueFlag) const {
     // Count devices
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(m_instance, &deviceCount, VK_NULL_HANDLE);
@@ -690,12 +698,15 @@ private:
     std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
 
-    auto isDeviceSuitable = [&](const VkPhysicalDevice &device) -> std::tuple<bool, uint32_t> {
+    auto isDeviceSuitable =
+        [&](const VkPhysicalDevice &device) -> std::tuple<bool, uint32_t> {
       uint32_t queueFamilyCount = 0;
-      vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, VK_NULL_HANDLE);
+      vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
+                                               VK_NULL_HANDLE);
 
       std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-      vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+      vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
+                                               queueFamilies.data());
 
       uint32_t index = 0;
       for (const auto &queueFamily : queueFamilies) {
@@ -733,11 +744,13 @@ private:
   VkInstance m_instance;
 };
 
-std::unique_ptr<Instance> createInstance(const std::string &appName = "Demo",
-                                         uint32_t appVersion = VK_MAKE_VERSION(1, 0, 0),
-                                         const std::string &engineName = "No Engine",
-                                         uint32_t engineVersion = VK_MAKE_VERSION(1, 0, 0)) {
-  return std::make_unique<Instance>(appName, appVersion, engineName, engineVersion);
+std::unique_ptr<Instance>
+createInstance(const std::string &appName = "Demo",
+               uint32_t appVersion = VK_MAKE_VERSION(1, 0, 0),
+               const std::string &engineName = "No Engine",
+               uint32_t engineVersion = VK_MAKE_VERSION(1, 0, 0)) {
+  return std::make_unique<Instance>(appName, appVersion, engineName,
+                                    engineVersion);
 }
 
 } // namespace vk

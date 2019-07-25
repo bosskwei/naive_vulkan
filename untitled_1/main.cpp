@@ -11,20 +11,15 @@
 #include <naive_vulkan/vulkan.hpp>
 // clang-format on
 
-
-class GraphicBase
-{
-const bool enableValidationLayers = true;
-const std::vector<const char *> validationLayers = {
-            "VK_LAYER_LUNARG_standard_validation"
-    };
-const std::vector<const char*> deviceExtensions = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
+class GraphicBase {
+  const bool enableValidationLayers = true;
+  const std::vector<const char *> validationLayers = {
+      "VK_LAYER_LUNARG_standard_validation"};
+  const std::vector<const char *> deviceExtensions = {
+      VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 public:
-  GraphicBase()
-  {
+  GraphicBase() {
     auto initWindow = [&]() -> GLFWwindow * {
       glfwInit();
 
@@ -62,9 +57,9 @@ public:
 
         std::vector<const char *> extensions(
             glfwExtensions, glfwExtensions + glfwExtensionCount);
-          
+
         if (enableValidationLayers) {
-            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+          extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         }
 
         return extensions;
@@ -75,16 +70,16 @@ public:
       createInfo.ppEnabledExtensionNames = extensions.data();
 
       if (enableValidationLayers) {
-          createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-          createInfo.ppEnabledLayerNames = validationLayers.data();
-        } else {
-          createInfo.enabledLayerCount = 0;
-        }
+        createInfo.enabledLayerCount =
+            static_cast<uint32_t>(validationLayers.size());
+        createInfo.ppEnabledLayerNames = validationLayers.data();
+      } else {
+        createInfo.enabledLayerCount = 0;
+      }
 
       // Create
       VkInstance instance;
-      if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
-      {
+      if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
         throw std::runtime_error("failed to create instance!");
       }
       std::cout << "create instance OK" << std::endl;
@@ -97,8 +92,7 @@ public:
     auto createSurface = [&]() -> VkSurfaceKHR {
       VkSurfaceKHR surface;
       if (glfwCreateWindowSurface(instance, window, nullptr, &surface) !=
-          VK_SUCCESS)
-      {
+          VK_SUCCESS) {
         throw std::runtime_error("failed to create window surface!");
       }
       return surface;
@@ -113,8 +107,7 @@ public:
       // Count devices
       uint32_t deviceCount = 0;
       vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-      if (deviceCount == 0)
-      {
+      if (deviceCount == 0) {
         throw std::runtime_error("failed to find GPUs with Vulkan support!");
       }
 
@@ -134,37 +127,31 @@ public:
 
         // graphic queue family
         uint32_t graphicQueueIndex = 0;
-        for (const auto &queueFamily : queueFamilies)
-        {
+        for (const auto &queueFamily : queueFamilies) {
           if (queueFamily.queueCount > 0 &&
               queueFamily.queueFlags &
                   (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT |
-                   VK_QUEUE_TRANSFER_BIT))
-          {
+                   VK_QUEUE_TRANSFER_BIT)) {
             break;
           }
           graphicQueueIndex += 1;
         }
-        if (graphicQueueIndex == queueFamilies.size())
-        {
+        if (graphicQueueIndex == queueFamilies.size()) {
           throw std::runtime_error("failed to create command pool!");
         }
 
         // present queue family
         uint32_t presentQueueIndex = 0;
-        for (const auto &queueFamily : queueFamilies)
-        {
+        for (const auto &queueFamily : queueFamilies) {
           if (queueFamily.queueCount > 0 &&
               queueFamily.queueFlags &
                   (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT |
-                   VK_QUEUE_TRANSFER_BIT))
-          {
+                   VK_QUEUE_TRANSFER_BIT)) {
             break;
           }
           presentQueueIndex += 1;
         }
-        if (presentQueueIndex == queueFamilies.size())
-        {
+        if (presentQueueIndex == queueFamilies.size()) {
           throw std::runtime_error("failed to create command pool!");
         }
 
@@ -174,19 +161,16 @@ public:
       uint32_t graphicQueueIndex;
       uint32_t presentQueueIndex;
       VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-      for (const auto &device : devices)
-      {
+      for (const auto &device : devices) {
         bool foundDevice;
         std::tie(foundDevice, graphicQueueIndex, presentQueueIndex) =
             isDeviceSuitable(device);
-        if (foundDevice)
-        {
+        if (foundDevice) {
           physicalDevice = device;
           break;
         }
       }
-      if (physicalDevice == VK_NULL_HANDLE)
-      {
+      if (physicalDevice == VK_NULL_HANDLE) {
         throw std::runtime_error("failed to find a suitable GPU!");
       }
 
@@ -231,20 +215,21 @@ public:
       createInfo.queueCreateInfoCount = 1;
       createInfo.pEnabledFeatures = &deviceFeatures;
 
-      createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-        createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+      createInfo.enabledExtensionCount =
+          static_cast<uint32_t>(deviceExtensions.size());
+      createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-        if (enableValidationLayers) {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledLayerNames = validationLayers.data();
-        } else {
-            createInfo.enabledLayerCount = 0;
-        }
+      if (enableValidationLayers) {
+        createInfo.enabledLayerCount =
+            static_cast<uint32_t>(validationLayers.size());
+        createInfo.ppEnabledLayerNames = validationLayers.data();
+      } else {
+        createInfo.enabledLayerCount = 0;
+      }
 
       VkDevice device;
       if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) !=
-          VK_SUCCESS)
-      {
+          VK_SUCCESS) {
         throw std::runtime_error("failed to create logical device!");
       }
       std::cout << "create device OK" << std::endl;
@@ -262,12 +247,12 @@ public:
     auto createSwapChain = [&]() {
       // prepare
       VkSurfaceCapabilitiesKHR capabilities;
-      vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-          physicalDevice, surface, &capabilities);
+      vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface,
+                                                &capabilities);
 
       uint32_t formatCount;
       vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface,
-                                                    &formatCount, nullptr);
+                                           &formatCount, nullptr);
       std::vector<VkSurfaceFormatKHR> formats;
       formats.resize(formatCount);
       vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface,
@@ -284,12 +269,10 @@ public:
       // format
       auto chooseSwapSurfaceFormat =
           [](const std::vector<VkSurfaceFormatKHR> &availableFormats) {
-            for (const auto &availableFormat : availableFormats)
-            {
+            for (const auto &availableFormat : availableFormats) {
               if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
                   availableFormat.colorSpace ==
-                      VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-              {
+                      VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
                 return availableFormat;
               }
             }
@@ -302,15 +285,11 @@ public:
           [](const std::vector<VkPresentModeKHR> &availablePresentModes) {
             VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
 
-            for (const auto &availablePresentMode : availablePresentModes)
-            {
-              if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-              {
+            for (const auto &availablePresentMode : availablePresentModes) {
+              if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
                 return availablePresentMode;
-              }
-              else if (availablePresentMode ==
-                       VK_PRESENT_MODE_IMMEDIATE_KHR)
-              {
+              } else if (availablePresentMode ==
+                         VK_PRESENT_MODE_IMMEDIATE_KHR) {
                 bestMode = availablePresentMode;
               }
             }
@@ -328,12 +307,9 @@ public:
       // swap extent
       auto chooseSwapExtent = [](const VkSurfaceCapabilitiesKHR &capabilities) {
         if (capabilities.currentExtent.width !=
-            std::numeric_limits<uint32_t>::max())
-        {
+            std::numeric_limits<uint32_t>::max()) {
           return capabilities.currentExtent;
-        }
-        else
-        {
+        } else {
           VkExtent2D actualExtent = {640, 480};
 
           actualExtent.width = std::max(
@@ -352,8 +328,7 @@ public:
       // image count
       uint32_t imageCount = capabilities.minImageCount + 1;
       if (capabilities.maxImageCount > 0 &&
-          imageCount > capabilities.maxImageCount)
-      {
+          imageCount > capabilities.maxImageCount) {
         imageCount = capabilities.maxImageCount;
       }
 
@@ -367,12 +342,9 @@ public:
       createInfo.imageExtent = extent;
       createInfo.imageArrayLayers = 1;
       createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-      if (graphicQueueIndex == presentQueueIndex)
-      {
+      if (graphicQueueIndex == presentQueueIndex) {
         createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-      }
-      else
-      {
+      } else {
         uint32_t queueIndexes[] = {graphicQueueIndex, presentQueueIndex};
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         createInfo.queueFamilyIndexCount = 2;
@@ -387,8 +359,7 @@ public:
       // create
       VkSwapchainKHR swapChain;
       if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) !=
-          VK_SUCCESS)
-      {
+          VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
       }
 
@@ -410,8 +381,10 @@ public:
   }
 };
 
-int main(int argc, char **argv)
-{
+void test_buffer() {
+}
+
+int main(int argc, char **argv) {
   // ----------
   // GraphicBase();
   // return 0;
@@ -428,12 +401,17 @@ int main(int argc, char **argv)
                                        VK_SHADER_STAGE_COMPUTE_BIT);
     std::cout << "3. Shader ready" << std::endl;
 
-    auto pipeline = device->createComputePipeline(shader, {{std::make_tuple(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER), std::make_tuple(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)}});
+    auto pipeline = device->createComputePipeline(
+        shader, {{std::make_tuple(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER),
+                  std::make_tuple(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)}});
     std::cout << "4. Pipeline ready" << std::endl;
 
-    auto buffer = device->createBuffer(1024, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    auto buffer = device->createBuffer(1024, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     pipeline->feedBuffer(0, 0, buffer, 0, 1024);
-    auto uniform = device->createBuffer(2 * 4, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    auto uniform =
+        device->createBuffer(2 * 4, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     pipeline->feedBuffer(0, 0, uniform, 0, 2 * 4);
     float aa[2] = {0.0f, 2.0f};
     uniform->update(aa, sizeof(aa));

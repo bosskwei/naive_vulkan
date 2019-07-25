@@ -1,0 +1,13 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+
+
+layout(set = 0, binding = 0) buffer SSBO
+{
+    uint32_t data[];
+};
+
+void main() {
+    uint32_t x = gl_GlobalInvocationID.x;
+    data[x] = x;
+}

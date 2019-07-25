@@ -360,7 +360,7 @@ private:
     // Check order, set
 
     // Pool
-    std::array<VkDescriptorPoolSize, 2> descriptorPoolSizes = {};
+    std::vector<VkDescriptorPoolSize> descriptorPoolSizes(2);
     descriptorPoolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptorPoolSizes[0].descriptorCount = 0;
     descriptorPoolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -381,6 +381,15 @@ private:
         }
       }
     }
+
+    // filter
+    std::vector<VkDescriptorPoolSize> temp;
+    for (const auto &x : descriptorPoolSizes) {
+      if (x.descriptorCount != 0) {
+        temp.push_back(x);
+      }
+    }
+    descriptorPoolSizes = temp;
 
     VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
     descriptorPoolCreateInfo.sType =

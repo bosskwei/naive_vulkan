@@ -2,7 +2,7 @@
 > wrapper for vulkan
 
 ## example
-```
+```CPP
 void test_uniform() {
   auto instance = vk::createInstance();
   std::cout << "1. Instance ready" << std::endl;
